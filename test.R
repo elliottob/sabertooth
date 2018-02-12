@@ -25,4 +25,3 @@ Batting %>%
   mutate(
     SB.deviation = SB - mean(SB, na.rm=T)
 ) %>% select(playerID, SB.deviation) 
-
