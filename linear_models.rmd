@@ -1,0 +1,39 @@
+---
+title: "test"
+author: "Elliott O'Brien"
+date: "February 19, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lattice)
+```
+
+## R Markdown
+
+```{r load_data}
+load("Baseball.RData")
+```
+
+## Including linear models
+
+You can also embed plots, for example:
+
+```{r filter}
+active_batters_2016 <- Batting %>% 
+  filter(yearID == 2016, AB > 0) %>% 
+  select(playerID) %>% 
+  inner_join(Batting, by='playerID')
+```
+
+```{r linear_model}
+active_batters_2016_lm <- active_batters_2016 %>% 
+  group_by(playerID) %>% 
+  do(
+    fit_hits = lm(H ~ yearID, data = .)
+  )
+  
+```
+
