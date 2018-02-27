@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(lattice)
+library(broom)
+library(purrr)
 ```
 
 ## R Markdown
@@ -23,17 +25,26 @@ You can also embed plots, for example:
 
 ```{r filter}
 active_batters_2016 <- Batting %>% 
-  filter(yearID == 2016, AB > 0) %>% 
+  filter(yearID == 2016, AB > 0) %>% # at least one at bat during 2016 year
   select(playerID) %>% 
-  inner_join(Batting, by='playerID')
+  left_join(Batting, by='playerID')
 ```
 
 ```{r linear_model}
-active_batters_2016_lm <- active_batters_2016 %>% 
+estimated_hits <- active_batters_2016 %>%
   group_by(playerID) %>% 
   do(
-    fit_hits = lm(H ~ yearID, data = .)
+    coefs = lm(H ~ yearID, data = .) %>% tidy %>% select(estimate) %>% unlist #replace with a function
+  ) %>% 
+  left_join( # joins estimates to 2017 data for QC
+    Batting2017 %>% 
+      filter(AB > 0) %>%  # only show QC for 2017 players that had at least one at bat and no missing data
+      select(Handle, H),
+    by=c("playerID" = "Handle")
+  ) %>%  
+  mutate(
+    estimate = ifelse(length(coefs) == 2, round(coefs[1] + coefs[2]*2017), round(coefs[1])),
+    bias = estimate - H
   )
-  
 ```
 
