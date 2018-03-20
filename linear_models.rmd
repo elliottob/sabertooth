@@ -37,8 +37,12 @@ estimated_hits <- active_batters_2016 %>%
     coefs = lm(H ~ yearID, data = .) %>% tidy %>% select(estimate) %>% unlist #replace with a function
   ) %>% 
   left_join( # joins estimates to 2017 data for QC
-    Batting2017 %>% 
-      filter(AB > 0) %>%  # only show QC for 2017 players that had at least one at bat and no missing data
+   Batting2017 %>% 
+      filter(AB > 0, Tm != 'TOT') %>%  # only show QC for 2017 players that had at least one at bat and no missing data
+      group_by(Handle) %>%
+      summarise(
+        H = sum(H)
+      ) %>% 
       select(Handle, H),
     by=c("playerID" = "Handle")
   ) %>%  
@@ -46,5 +50,6 @@ estimated_hits <- active_batters_2016 %>%
     estimate = ifelse(length(coefs) == 2, round(coefs[1] + coefs[2]*2017), round(coefs[1])),
     bias = estimate - H
   )
+estimated_hits
 ```
 
