@@ -11,6 +11,7 @@ library(tidyverse)
 library(lattice)
 library(broom)
 library(purrr)
+library(knitr)
 ```
 
 ## R Markdown
@@ -48,3 +49,37 @@ estimated_hits <- active_batters_2016 %>%
   )
 ```
 
+```{r linear_mixed_model}
+library(nlme)
+
+hits.lme <- active_batters_2016 %>%
+  group_by(playerID) %>%
+  lme(H ~ yearID, random=~1|playerID, data = .) %>% predict(
+    newdata = Batting2017 %>% 
+      filter(AB > 0, Tm != 'TOT') %>%  # only show QC for 2017 players that had at least one at bat and no missing data
+      select(Handle, H) %>%
+      group_by(Handle) %>%
+      summarize(H = sum(H, na.rm=T)) %>%
+      filter(Handle != '') %>%
+      rename(playerID = Handle) %>%
+      mutate(yearID = 2017)
+  ) %>% 
+  tidy %>%
+  rename(playerID = names, estimate=x) %>%
+  left_join(
+    Batting2017 %>% 
+      filter(AB > 0, Tm != 'TOT') %>%  # only show QC for 2017 players that had at least one at bat and no missing data
+      select(Handle, H) %>%
+      group_by(Handle) %>%
+      summarize(H = sum(H, na.rm=T)) %>%
+      filter(Handle != '') %>%
+      rename(playerID = Handle)
+  ) %>%
+  mutate(
+     bias = estimate - H
+  )
+
+kable(hits.lme)
+```
+
+The linear mixed model is under estimating on average with a average bias of `r mean(hits.lme$bias, na.rm=T)`.
