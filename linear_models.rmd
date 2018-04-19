@@ -1,0 +1,55 @@
+---
+title: "test"
+author: "Elliott O'Brien"
+date: "February 19, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lattice)
+library(broom)
+library(purrr)
+```
+
+## R Markdown
+
+```{r load_data}
+load("Baseball.RData")
+```
+
+## Including linear models
+
+You can also embed plots, for example:
+
+```{r filter}
+active_batters_2016 <- Batting %>% 
+  filter(yearID == 2016, AB > 0) %>% # at least one at bat during 2016 year
+  select(playerID) %>% 
+  left_join(Batting, by='playerID')
+```
+
+```{r linear_model}
+estimated_hits <- active_batters_2016 %>%
+  group_by(playerID) %>% 
+  do(
+    coefs = lm(H ~ yearID, data = .) %>% tidy %>% select(estimate) %>% unlist #replace with a function
+  ) %>% 
+  left_join( # joins estimates to 2017 data for QC
+   Batting2017 %>% 
+      filter(AB > 0, Tm != 'TOT') %>%  # only show QC for 2017 players that had at least one at bat and no missing data
+      group_by(Handle) %>%
+      summarise(
+        H = sum(H)
+      ) %>% 
+      select(Handle, H),
+    by=c("playerID" = "Handle")
+  ) %>%  
+  mutate(
+    estimate = ifelse(length(coefs) == 2, round(coefs[1] + coefs[2]*2017), round(coefs[1])),
+    bias = estimate - H
+  )
+estimated_hits
+```
+
