@@ -38,13 +38,18 @@ active_batters_2016 <- Batting %>%
   left_join(Batting, by='playerID')
 ```
 
+```{r}
+test_hits <- inner_join(test_hits, active_batters_2016, by='playerID')
+head(test_hits)
+```
+
 ## Linear Fixed Effects Model
 
 ```{r linear_model}
 hits.lm <- active_batters_2016 %>%
   group_by(playerID) %>% 
   do(
-    coefs = lm(H ~ yearID, data = .) %>% tidy %>% select(estimate) %>% unlist # replace with a function
+    coefs = lm(H ~ yearID, data = .) %>% tidy %>% select(estimate) %>% unlist # testreplace with a function
   ) %>% 
   left_join( test_hits ) %>%
   mutate(
