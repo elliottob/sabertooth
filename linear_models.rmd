@@ -19,28 +19,28 @@ library(kableExtra)
 
 # Hits Estimation
 
-```{r load_data}
-load("Baseball.RData")
-test_hits <- Batting2017 %>% 
-      filter(AB > 0, Tm != 'TOT', !is.na(H)) %>%  # at least one at bat during 2016 year, remove total rows
-      select(Handle, H) %>%
-      group_by(Handle) %>%
-      summarize(H = sum(H, na.rm=T)) %>%
-      filter(Handle != '') %>%
-      rename(playerID = Handle) %>%
-      mutate(yearID = 2017)
-```
-
 ```{r filter}
+load("Baseball.RData")
 active_batters_2016 <- Batting %>% 
   filter(yearID == 2016, AB > 0) %>% # at least one at bat during 2016 year
   select(playerID) %>% 
   left_join(Batting, by='playerID')
 ```
 
-```{r}
-test_hits <- active_batters_2016 %>% 
-  filter(playerID %in% test_hits$playerID)
+```{r load_data}
+test_hits <- Batting2017 %>%
+  rename(playerID = Handle) %>%
+  filter(
+    AB > 0, 
+    Tm != 'TOT', 
+    !is.na(H),
+    playerID %in% active_batters_2016$playerID
+    ) %>%  # at least one at bat during 2016 year, remove total rows
+  select(playerID, H) %>%
+  group_by(playerID) %>%
+  summarize(H = sum(H, na.rm=T)) %>%
+  filter(playerID != '') %>%
+  mutate(yearID = 2017)
 ```
 
 ## Linear Fixed Effects Model
@@ -60,6 +60,7 @@ hits.lm <- active_batters_2016 %>%
 kable(hits.lm, "html") %>%
   kable_styling(bootstrap_options = c("condensed", "responsive", "striped")) %>%
   scroll_box(height="250px")
+test_hits
 ```
 
 The linear fixed effects model is over estimating with a average bias of `r mean(hits.lm$bias, na.rm=T)`.
