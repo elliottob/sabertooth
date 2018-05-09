@@ -28,7 +28,10 @@ test_hits <- Batting2017 %>%
       summarize(H = sum(H, na.rm=T)) %>%
       filter(Handle != '') %>%
       rename(playerID = Handle) %>%
-      mutate(yearID = 2017)
+      mutate(
+        playerID = as.character(playerID),
+        yearID = 2017
+        )
 ```
 
 ```{r filter}
@@ -39,8 +42,8 @@ active_batters_2016 <- Batting %>%
 ```
 
 ```{r}
-test_hits <- inner_join(test_hits, active_batters_2016, by='playerID')
-head(test_hits)
+test_hits <- active_batters_2016 %>% 
+  filter(playerID %in% test_hits$playerID)
 ```
 
 ## Linear Fixed Effects Model
