@@ -28,10 +28,7 @@ test_hits <- Batting2017 %>%
       summarize(H = sum(H, na.rm=T)) %>%
       filter(Handle != '') %>%
       rename(playerID = Handle) %>%
-      mutate(
-        playerID = as.character(playerID),
-        yearID = 2017
-        )
+      mutate(yearID = 2017)
 ```
 
 ```{r filter}
