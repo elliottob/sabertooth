@@ -1,0 +1,97 @@
+---
+title: "Linear Models - Hits"
+author: "Elliott O'Brien"
+date: "February 19, 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lattice)
+library(broom)
+library(purrr)
+library(knitr)
+library(kableExtra)
+```
+
+# Hits Estimation
+
+```{r load_data}
+load("Baseball.RData")
+test_hits <- Batting2017 %>% 
+      filter(AB > 0, Tm != 'TOT', !is.na(H)) %>%  # at least one at bat during 2016 year, remove total rows
+      select(Handle, H) %>%
+      group_by(Handle) %>%
+      summarize(H = sum(H, na.rm=T)) %>%
+      filter(Handle != '') %>%
+      rename(playerID = Handle) %>%
+      mutate(yearID = 2017)
+```
+
+```{r filter}
+active_batters_2016 <- Batting %>% 
+  filter(yearID == 2016, AB > 0) %>% # at least one at bat during 2016 year
+  select(playerID) %>% 
+  left_join(Batting, by='playerID')
+```
+
+## Linear Fixed Effects Model
+
+```{r linear_model}
+hits.lm <- active_batters_2016 %>%
+  group_by(playerID) %>% 
+  do(
+    coefs = lm(H ~ yearID, data = .) %>% tidy %>% select(estimate) %>% unlist # replace with a function
+  ) %>% 
+  left_join( test_hits ) %>%
+  mutate(
+    estimate = ifelse(length(coefs) == 2, round(coefs[1] + coefs[2]*yearID), round(coefs[1])),
+    bias = estimate - H
+  ) %>% select(playerID, estimate, H, bias)
+
+kable(hits.lm, "html") %>%
+  kable_styling(bootstrap_options = c("condensed", "responsive", "striped")) %>%
+  scroll_box(height="250px")
+```
+
+The linear fixed effects model is over estimating with a average bias of `r mean(hits.lm$bias, na.rm=T)`.
+
+```{r}
+hits.lm %>% 
+  ggplot(aes(x=bias)) + geom_density()
+```
+
+
+## Linear Mixed Effects Model
+
+```{r linear_mixed_model}
+library(nlme)
+
+hits.lme <- active_batters_2016 %>%
+  group_by(playerID) %>%
+  lme(H ~ yearID, random=~1|playerID, data = .) %>% 
+  predict(
+    newdata = test_hits
+  ) %>% 
+  tidy %>%
+  rename(playerID = names, estimate=x) %>%
+  left_join( test_hits ) %>%
+  mutate( bias = estimate - H ) %>%
+  select(playerID, estimate, H, bias)
+
+kable(hits.lme, "html") %>%
+  kable_styling(
+    bootstrap_options = c("condensed", "responsive","striped")
+  ) %>%
+  scroll_box(height="250px")
+```
+
+The linear mixed model is under estimating with a average bias of `r mean(hits.lme$bias, na.rm=T)`.
+
+```{r}
+hits.lme %>% 
+  ggplot(aes(x=bias)) + geom_density()
+```
